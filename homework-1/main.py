@@ -24,9 +24,9 @@ def create_connection():
 def insert_data(connection, table_name, data):
     try:
         with connection.cursor() as cursor:
-            # Получаем заголовок (первую строку) для определения столбцов
+
             header = data[0]
-            for row in data[1:]:  # Начинаем с 1, чтобы пропустить заголовок
+            for row in data[1:]:
                 columns = ', '.join(header)
                 values = ', '.join(['%s'] * len(row))
                 query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
