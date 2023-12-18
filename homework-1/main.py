@@ -1,53 +1,54 @@
-"""Скрипт для заполнения данными таблиц в БД Postgres."""
 import psycopg2
+import csv
 import os
 
+def read_csv(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        return [row for row in reader]
 
+def create_connection():
+    try:
+        connection = psycopg2.connect(
+            host="localhost",
+            database="north",
+            port='5433',
+            user="postgres",
+            password="1234"
+        )
+        return connection
+    except Exception as e:
+        print(f"Error: Unable to connect to the database. {e}")
+        return None
 
-# Подключение к базе данных
-conn = psycopg2.connect(
-    host="localhost",
-    database="north",
-    user="postgres",
-    password="12345"
-)
+def insert_data(connection, table_name, data):
+    try:
+        with connection.cursor() as cursor:
+            # Получаем заголовок (первую строку) для определения столбцов
+            header = data[0]
+            for row in data[1:]:  # Начинаем с 1, чтобы пропустить заголовок
+                columns = ', '.join(header)
+                values = ', '.join(['%s'] * len(row))
+                query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
+                cursor.execute(query, row)
+        connection.commit()
+    except Exception as e:
+        print(f"Error: Unable to insert data into {table_name}. {e}")
 
-# Создание курсора для выполнения SQL-запросов
-cursor = conn.cursor()
+def main():
+    data_folder = '/Users/nikolayyaroshenko/Desktop/develop/pythonProject/skypro/Les_SQL/postgres-homeworks/homework-1/north_data'  # Укажите путь к папке с данными
+    employees_data = read_csv(os.path.join(data_folder, 'employees_data.csv'))
+    customers_data = read_csv(os.path.join(data_folder, 'customers_data.csv'))
+    orders_data = read_csv(os.path.join(data_folder, 'orders_data.csv'))
 
-# Заполнение таблиц данными
-def fill_employees_table():
-    with open("north_data/employees.csv", "r") as file:
-        next(file)  # Пропускаем заголовок
-        for line in file:
-            data = line.strip().split(",")
-            cursor.execute("INSERT INTO employees (first_name, last_name, job_title, department, hire_date, salary) VALUES (%s, %s, %s, %s, %s, %s)",
-                           (data[0], data[1], data[2], data[3], data[4], data[5]))
+    connection = create_connection()
 
-def fill_customers_table():
-    with open("north_data/customers.csv", "r") as file:
-        next(file)  # Пропускаем заголовок
-        for line in file:
-            data = line.strip().split(",")
-            cursor.execute("INSERT INTO customers (first_name, last_name, email, phone_number, address) VALUES (%s, %s, %s, %s, %s)",
-                           (data[0], data[1], data[2], data[3], data[4]))
+    if connection:
+        insert_data(connection, 'employees', employees_data)
+        insert_data(connection, 'customers', customers_data)
+        insert_data(connection, 'orders', orders_data)
 
-def fill_orders_table():
-    with open("north_data/orders.csv", "r") as file:
-        next(file)  # Пропускаем заголовок
-        for line in file:
-            data = line.strip().split(",")
-            cursor.execute("INSERT INTO orders (customer_id, employee_id, order_date, ship_date, product_name, quantity, total_price) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                           (data[0], data[1], data[2], data[3], data[4], data[5], data[6]))
+        connection.close()
 
-# Заполнение таблиц данными
-fill_employees_table()
-fill_customers_table()
-fill_orders_table()
-
-# Применение изменений
-conn.commit()
-
-# Закрытие соединения с базой данных
-cursor.close()
-conn.close()
+if __name__ == "__main__":
+    main()
